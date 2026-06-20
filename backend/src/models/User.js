@@ -24,7 +24,7 @@ const UserSchema = new Schema({
 );
 
 // Make sure to explicitly change this if any new field is added to the User schema that should be included in the safe object returned by toSafeObject method.
-userSchema.methods.toSafeObject = function () {
+UserSchema.methods.toSafeObject = function () {
     return {
         id: this._id,
         first_name: this.first_name,
