@@ -3,7 +3,7 @@ import { User } from '../models/User.js';
 import { updateUserSchema } from '../validators/user.validator.js';
 
 import { sendEmailVerification as sendEmailVerificationMail, sendPasswordResetEmail as sendPasswordResetEmailMail } from '../services/email.js';
-
+import {generateTokens} from '../middlewares/auth.js'
 
 export const register = async (req, res) => {
     try {
@@ -75,8 +75,7 @@ export const login = async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
+        const { accessToken, refreshToken } = await generateTokens(user._id);
 
         user.refreshToken = hash(refreshToken);
 
@@ -84,7 +83,10 @@ export const login = async (req, res) => {
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.SECURE_COOKIES === 'true',
+            secure: process.env.SECURE_COOKIES === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+
         });
 
         return res.json({ accessToken, user: user.toSafeObject() });
