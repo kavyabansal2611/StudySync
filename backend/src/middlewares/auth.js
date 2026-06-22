@@ -70,7 +70,10 @@ export const verifyJWT = async (req, res, next) => {
 
         res.cookie('refreshToken', newRefreshToken, {
             httpOnly: true,
-            secure: process.env.SECURE_COOKIES === 'true',
+            secure: process.env.SECURE_COOKIES === 'production',
+            sameSite='strict',
+            maxAge=7*24*60*60*1000
+
         });
 
         res.setHeader("Authorization", "Bearer " + newAccessToken);

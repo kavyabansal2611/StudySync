@@ -25,7 +25,7 @@ export const register = async (req, res) => {
         const accessToken = newUser.generateAccessToken();
         const refreshToken = newUser.generateRefreshToken();
 
-        newUser.refreshToken = refreshToken;
+        newUser.refreshToken = hash(refreshToken);
 
         await newUser.save();
 
@@ -62,6 +62,12 @@ export const login = async (req, res) => {
             return res.status(400).json({ error: "Input email and password" });
         }
         const user = await User.findOne({ email })
+        if(!user.isVerified){
+            return res.status(403).json({
+                error:"Verify email"
+            });
+
+        }
 
         if (
             !user || !(await user.comparePassword(password))
@@ -72,7 +78,7 @@ export const login = async (req, res) => {
         const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken();
 
-        user.refreshToken = refreshToken;
+        user.refreshToken = hash(refreshToken);
 
         await user.save();
 
@@ -288,7 +294,7 @@ export const logout = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
         if (refreshToken) {
-            req.clearCookie('refreshToken', {
+            res.clearCookie('refreshToken', {
                 httpOnly: true,
                 secure: process.env.SECURE_COOKIES === 'true',
             });
