@@ -12,8 +12,10 @@ router.post('/login', validate(loginSchema), login);
 
 router.get('/me', verifyJWT, getUserInfo);
 router.patch('/me', verifyJWT, UpdateUserInfo);
-router.post('/login/emailverify', verifyJWT, sendEmailVerification);
-router.get('/login/emailverify', verifyJWT, verifyEmail);
+router.post('/emailverify', verifyJWT, sendEmailVerification);
+router.get('/emailverify', verifyEmail);
 router.post('/forgot_password', sendPasswordResetEmail);
 router.post('/reset_password', resetPassword);
 router.post('/logout', verifyJWT, logout);
+
+export default router;

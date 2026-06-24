@@ -1,5 +1,5 @@
 import { User } from '../models/User.js';
-
+import jwt from 'jsonwebtoken';
 import { updateUserSchema } from '../validators/user.validator.js';
 
 import { sendEmailVerification as sendEmailVerificationMail, sendPasswordResetEmail as sendPasswordResetEmailMail } from '../services/email.js';
@@ -7,6 +7,10 @@ import { sendEmailVerification as sendEmailVerificationMail, sendPasswordResetEm
 
 export const register = async (req, res) => {
     try {
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'Request body is empty' });
+        }
+
         const { first_name, last_name, email, password, username, year_of_study } = req.body;
         if (typeof email !== 'string' || typeof password !== 'string') {
             return res.status(400).json({ error: 'Invalid input' });
@@ -15,7 +19,7 @@ export const register = async (req, res) => {
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });   // req.body.email should be asserted as string before it touches any query
 
         if (existingUser) {
-            return res.status(400).json({ error: 'Registration failed' });
+            return res.status(400).json({ error: 'User with this email or username already exists' });
         }
 
         const newUser = new User(
@@ -49,26 +53,33 @@ export const register = async (req, res) => {
         });
 
     } catch (err) {
+        console.error(err);
         if (err.code === 11000) {
             return res.status(400).json({ error: 'Registration failed' });
         }
-        console.error(err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 export const login = async (req, res) => {
     try {
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'Request body is empty' });
+        }
+
         const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: "Input email and password" });
         }
-        const user = await User.findOne({ email })
+        const user = await User.findOne({ email }).select('+password');
 
-        if (
-            !user || !(await user.comparePassword(password))
-        ) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+        if (!user) {
+            return res.status(400).json({ error: "User not found" })
+        }
+
+        const isMatch = await user.comparePassword(password)
+        if (!isMatch) {
+            return res.status(400).json({ error: "invalid credentials" })
         }
 
         const accessToken = user.generateAccessToken();
@@ -176,6 +187,11 @@ export const sendEmailVerification = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'Invalid' });
         }
+
+        if (user.isVerified) {
+            return res.status(400).json({ error: 'Email already verified' });
+        }
+
         const emailToken = user.emailVerifyToken();
 
         try {
@@ -194,7 +210,8 @@ export const sendEmailVerification = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
     try {
-        const token = req.query.token;
+
+        const token = req.query?.token;
         if (!token) {
             return res.status(400).json({ error: 'Token is required' });
         }
@@ -229,6 +246,10 @@ export const verifyEmail = async (req, res) => {
 
 export const sendPasswordResetEmail = async (req, res) => {
     try {
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'Request body is empty' });
+        }
+
         const { email } = req.body;
         if (!email) {
             return res.status(400).json({ error: 'Email is required' });
@@ -258,7 +279,7 @@ export const sendPasswordResetEmail = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
     try {
-        const token = req.query.token;
+        const token = req.query?.token;
         if (!token) {
             return res.status(400).json({ error: 'Token is required' });
         }
@@ -271,6 +292,10 @@ export const resetPassword = async (req, res) => {
         const user = await User.findById(decoded.id);
         if (!user) {
             return res.status(404).json({ error: 'Invalid' });
+        }
+
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'Request body is empty' });
         }
 
         const { new_password } = req.body;
@@ -290,7 +315,7 @@ export const resetPassword = async (req, res) => {
 
 export const logout = async (req, res) => {
     try {
-        const refreshToken = req.cookies.refreshToken;
+        const refreshToken = req.cookies?.refreshToken;
         if (refreshToken) {
             res.clearCookie('refreshToken', {
                 httpOnly: true,

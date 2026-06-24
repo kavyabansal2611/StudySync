@@ -30,6 +30,7 @@ export const verifyJWT = async (req, res, next) => {
     }
 
     if (accessToken) {
+
         try {
             const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
 
@@ -49,41 +50,39 @@ export const verifyJWT = async (req, res, next) => {
         }
     }
 
-    else {
-
-        if (!refreshToken) {
-            return res.status(401).json({ message: "Session expired, login again" });
-        }
-
-        try {
-            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-
-            const user = await User.findById(decoded.id);
-            if (!user || user.refreshToken !== refreshToken) {
-                return res.status(401).json({ message: "Invalid refresh token" });
-            }
-
-            const foundUser = await User.findById(decoded.id)
-                .select("-password -refreshToken");
-
-            if (!foundUser) return res.status(401).json({ message: "User not found" });
-
-            const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokens(decoded.id);
-
-            res.cookie('refreshToken', newRefreshToken, {
-                httpOnly: true,
-                secure: process.env.SECURE_COOKIES === 'true',
-                sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            });
-
-            res.setHeader("Authorization", "Bearer " + newAccessToken);
-            req.user = foundUser;
-
-            return next();
-        } catch (err) {
-            console.error("Error verifying refresh token:", err);
-            return res.status(401).json({ message: "Refresh token expired, login again" });
-        }
+    if (!refreshToken) {
+        return res.status(401).json({ message: "Session expired, login again" });
     }
+
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+        const user = await User.findById(decoded.id);
+        if (!user || user.refreshToken !== refreshToken) {
+            return res.status(401).json({ message: "Invalid refresh token" });
+        }
+
+        const foundUser = await User.findById(decoded.id)
+            .select("-password -refreshToken");
+
+        if (!foundUser) return res.status(401).json({ message: "User not found" });
+
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokens(decoded.id);
+
+        res.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.SECURE_COOKIES === 'true',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.setHeader("Authorization", "Bearer " + newAccessToken);
+        req.user = foundUser;
+
+        return next();
+    } catch (err) {
+        console.error("Error verifying refresh token:", err);
+        return res.status(401).json({ message: "Refresh token expired, login again" });
+    }
+
 }
