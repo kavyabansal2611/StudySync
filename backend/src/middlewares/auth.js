@@ -30,6 +30,7 @@ export const verifyJWT = async (req, res, next) => {
     }
 
     if (accessToken) {
+
         try {
             const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
 
@@ -71,6 +72,8 @@ export const verifyJWT = async (req, res, next) => {
         res.cookie('refreshToken', newRefreshToken, {
             httpOnly: true,
             secure: process.env.SECURE_COOKIES === 'true',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         res.setHeader("Authorization", "Bearer " + newAccessToken);
@@ -81,4 +84,5 @@ export const verifyJWT = async (req, res, next) => {
         console.error("Error verifying refresh token:", err);
         return res.status(401).json({ message: "Refresh token expired, login again" });
     }
+
 }

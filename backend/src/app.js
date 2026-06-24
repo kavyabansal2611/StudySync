@@ -18,9 +18,13 @@ app.get('/api/status', (req, res) => {
     res.send('Hello, World!');
 });
 
-import authRouter from '../routes/auth.routes.js';
+import { verifyJWT } from './middlewares/auth.js';
 
-app.use('/auth', authRouter);
+import authRouter from './routes/auth.routes.js';
+import taskRouter from './routes/task.routes.js';
+
+app.use('/api/auth', authRouter);
+app.use('/api/tasks', verifyJWT, taskRouter);
 
 app.use((err, req, res, next) => {
     const statusCode = err?.statusCode || 500;
