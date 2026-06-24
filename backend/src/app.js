@@ -18,7 +18,7 @@ app.get('/api/status', (req, res) => {
     res.send('Hello, World!');
 });
 
-import authRouter from '../routes/auth.routes.js';
+import authRouter from './routes/auth.routes.js';
 
 app.use('/auth', authRouter);
 

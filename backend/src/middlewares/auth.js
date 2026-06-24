@@ -49,36 +49,41 @@ export const verifyJWT = async (req, res, next) => {
         }
     }
 
-    if (!refreshToken) {
-        return res.status(401).json({ message: "Session expired, login again" });
-    }
+    else {
 
-    try {
-        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-
-        const user = await User.findById(decoded.id);
-        if (!user || user.refreshToken !== refreshToken) {
-            return res.status(401).json({ message: "Invalid refresh token" });
+        if (!refreshToken) {
+            return res.status(401).json({ message: "Session expired, login again" });
         }
 
-        const foundUser = await User.findById(decoded.id)
-            .select("-password -refreshToken");
+        try {
+            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-        if (!foundUser) return res.status(401).json({ message: "User not found" });
+            const user = await User.findById(decoded.id);
+            if (!user || user.refreshToken !== refreshToken) {
+                return res.status(401).json({ message: "Invalid refresh token" });
+            }
 
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokens(decoded.id);
+            const foundUser = await User.findById(decoded.id)
+                .select("-password -refreshToken");
 
-        res.cookie('refreshToken', newRefreshToken, {
-            httpOnly: true,
-            secure: process.env.SECURE_COOKIES === 'true',
-        });
+            if (!foundUser) return res.status(401).json({ message: "User not found" });
 
-        res.setHeader("Authorization", "Bearer " + newAccessToken);
-        req.user = foundUser;
+            const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokens(decoded.id);
 
-        return next();
-    } catch (err) {
-        console.error("Error verifying refresh token:", err);
-        return res.status(401).json({ message: "Refresh token expired, login again" });
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.SECURE_COOKIES === 'true',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            res.setHeader("Authorization", "Bearer " + newAccessToken);
+            req.user = foundUser;
+
+            return next();
+        } catch (err) {
+            console.error("Error verifying refresh token:", err);
+            return res.status(401).json({ message: "Refresh token expired, login again" });
+        }
     }
 }
