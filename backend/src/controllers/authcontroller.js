@@ -38,7 +38,9 @@ export const register = async (req, res) => {
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.SECURE_COOKIES === 'true',
+            secure: process.env.SECURE_COOKIES === 'production',
+            sameSite='strict',
+            maxAge=7*24*60*60*1000 //7days
         });
 
         return res.status(201).json({
@@ -78,7 +80,9 @@ export const login = async (req, res) => {
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.SECURE_COOKIES === 'true',
+            secure: process.env.SECURE_COOKIES === 'production',
+            sameSite='strict',
+            maxAge=7*24*60*60*1000 //7days
         });
 
         return res.json({ accessToken, user: user.toSafeObject() });
@@ -288,7 +292,7 @@ export const logout = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
         if (refreshToken) {
-            req.clearCookie('refreshToken', {
+            res.clearCookie('refreshToken', {
                 httpOnly: true,
                 secure: process.env.SECURE_COOKIES === 'true',
             });
