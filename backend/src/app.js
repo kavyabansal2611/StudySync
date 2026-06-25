@@ -23,10 +23,12 @@ import { verifyJWT } from './middlewares/auth.js';
 import authRouter from './routes/auth.routes.js';
 import taskRouter from './routes/task.routes.js';
 import noteRouter from './routes/note.routes.js';
+import eventRouter from './routes/event.routes.js';
 
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', verifyJWT, taskRouter);
 app.use('/api/notes', verifyJWT, noteRouter);
+app.use('/api/events', verifyJWT, eventRouter);
 
 app.use((err, req, res, next) => {
     const statusCode = err?.statusCode || 500;
